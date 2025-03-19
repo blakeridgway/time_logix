@@ -54,7 +54,7 @@ jobs:
           ./appimagetool-x86_64.AppImage AppDir
 
       - name: Upload Linux Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: TimeLogix-AppImage
           path: TimeLogix*.AppImage
@@ -78,7 +78,7 @@ jobs:
         run: pyinstaller --onefile --windowed time_logix.py
 
       - name: Upload Windows Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: TimeLogix-Windows
           path: dist/time_logix.exe
