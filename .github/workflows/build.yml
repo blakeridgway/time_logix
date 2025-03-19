@@ -1,0 +1,85 @@
+name: Build AppImage and Windows .exe
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    name: Build AppImage
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build Linux executable with PyInstaller
+        run: |
+          pyinstaller --onefile --windowed time_logix.py
+          mkdir -p AppDir/usr/bin
+          cp dist/time_logix AppDir/usr/bin/time_logix
+          # Create AppRun File
+          echo '#!/bin/bash' > AppDir/AppRun
+          echo 'HERE="$(dirname "$(readlink -f "${0}")")"' >> AppDir/AppRun
+          echo 'exec "$HERE/usr/bin/time_logix" "$@"' >> AppDir/AppRun
+          chmod +x AppDir/AppRun
+          # Create desktop file
+          cat <<EOF > AppDir/time_logix.desktop
+          [Desktop Entry]
+          Type=Application
+          Name=TimeLogix
+          Exec=time_logix
+          Icon=appicon
+          Comment=Time tracking app for contractors
+          Categories=Utility;
+          EOF
+      - name: Download appimagetool
+        run: |
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+
+      - name: Build AppImage
+        run: |
+          ./appimagetool-x86_64.AppImage AppDir
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: TimeLogix-AppImage
+          path: TimeLogix*.AppImage
+
+  build-windows:
+    runs-on: windows-latest
+    name: Build Windows Executable
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build Windows executable with PyInstaller
+        run: pyinstaller --onefile --windowed time_logix.py
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: TimeLogix-Windows
+          path: dist/time_logix.exe
+      
