@@ -24,27 +24,28 @@ jobs:
       - name: Install PyInstaller
         run: pip install pyinstaller
 
-      - name: Build Linux executable with PyInstaller
+      - name: Create AppDir structure and files without icon
         run: |
-          pyinstaller --onefile --windowed time_logix.py
           mkdir -p AppDir/usr/bin
-          cp dist/time_logix AppDir/usr/bin/time_logix
-          # Create AppRun File
-          echo '#!/bin/bash' > AppDir/AppRun
-          echo 'HERE="$(dirname "$(readlink -f "${0}")")"' >> AppDir/AppRun
-          echo 'exec "$HERE/usr/bin/time_logix" "$@"' >> AppDir/AppRun
+          pyinstaller --onefile --windowed time_tracker.py
+          cp dist/time_tracker AppDir/usr/bin/time_tracker
+          # Create AppRun file
+          cat <<'EOF' > AppDir/AppRun
+          #!/bin/bash
+          HERE="$(dirname "$(readlink -f "${0}")")"
+          exec "$HERE/usr/bin/time_tracker" "$@"
+          EOF
           chmod +x AppDir/AppRun
-          # Create desktop file
+          # Create desktop file without an icon reference
           cat <<EOF > AppDir/time_logix.desktop
           [Desktop Entry]
           Type=Application
           Name=TimeLogix
-          Exec=time_logix
-          Icon=appicon
+          Exec=time_tracker
           Comment=Time tracking app for contractors
           Categories=Utility;
           EOF
-      
+
       - name: Install FUSE library
         run: sudo apt-get update && sudo apt-get install -y libfuse2
 
