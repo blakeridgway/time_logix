@@ -27,13 +27,13 @@ jobs:
       - name: Create AppDir structure and files without icon
         run: |
           mkdir -p AppDir/usr/bin
-          pyinstaller --onefile --windowed time_tracker.py
-          cp dist/time_tracker AppDir/usr/bin/time_tracker
+          pyinstaller --onefile --windowed time_logix.py
+          cp dist/time_logix AppDir/usr/bin/time_logix
           # Create AppRun file
           cat <<'EOF' > AppDir/AppRun
           #!/bin/bash
           HERE="$(dirname "$(readlink -f "${0}")")"
-          exec "$HERE/usr/bin/time_tracker" "$@"
+          exec "$HERE/usr/bin/time_logix" "$@"
           EOF
           chmod +x AppDir/AppRun
           # Create desktop file without an icon reference
@@ -41,7 +41,7 @@ jobs:
           [Desktop Entry]
           Type=Application
           Name=TimeLogix
-          Exec=time_tracker
+          Exec=time_logix
           Comment=Time tracking app for contractors
           Categories=Utility;
           EOF
