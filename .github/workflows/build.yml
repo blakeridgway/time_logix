@@ -2,9 +2,15 @@ name: Build AppImage, Windows EXE and Publish Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+
+permissions:
+  contents: write
+  releases: write
 
 jobs:
   build-linux:
@@ -51,7 +57,7 @@ jobs:
           EOF
           # Download a placeholder icon and save it as appicon.png in AppDir
           wget -q -O AppDir/appicon.png https://placehold.co/256
-          
+
       - name: Install FUSE library
         run: sudo apt-get update && sudo apt-get install -y libfuse2
 
