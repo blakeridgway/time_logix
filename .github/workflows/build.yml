@@ -31,7 +31,6 @@ jobs:
       - name: Create AppDir and Files
         run: |
           mkdir -p AppDir/usr/bin
-          pyinstaller --onefile --windowed time_logix.py
           cp dist/time_logix AppDir/usr/bin/time_logix
           # Create AppRun file
           cat <<'EOF' > AppDir/AppRun
@@ -52,7 +51,7 @@ jobs:
           EOF
           # Download a placeholder icon and save it as appicon.png in AppDir
           wget -q -O AppDir/appicon.png https://placehold.co/256
-
+          
       - name: Install FUSE library
         run: sudo apt-get update && sudo apt-get install -y libfuse2
 
@@ -121,15 +120,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Linux AppImage to Release
-        uses: softprops/action-gh-release-upload@v2
-        with:
-          asset_path: ./$(ls | grep AppImage)
-          asset_name: TimeLogix-AppImage.AppImage
-          asset_content_type: application/octet-stream
+        shell: bash
+        run: |
+          gh release upload ${{ github.ref_name }} ./$(ls | grep AppImage) \
+          --name TimeLogix-AppImage.AppImage \
+          --label "Linux AppImage"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows EXE to Release
-        uses: softprops/action-gh-release-upload@v2
-        with:
-          asset_path: ./$(ls
+        shell: bash
+        run: |
+          gh release upload ${{ github.ref_name }} ./$(ls | grep .exe) \
+          --name TimeLogix-Windows.exe \
+          --label "Windows Executable"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
