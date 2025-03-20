@@ -2,6 +2,8 @@ name: Build AppImage, Windows EXE and Publish Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*.*.*'
   workflow_dispatch:
