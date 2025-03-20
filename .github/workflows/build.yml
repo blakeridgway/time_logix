@@ -48,7 +48,7 @@ jobs:
           EOF
           chmod +x AppDir/AppRun
           # Create desktop file with icon reference
-          cat <<EOF > AppDir/time_logix.desktop
+          cat <<'EOF' > AppDir/time_logix.desktop
           [Desktop Entry]
           Type=Application
           Name=TimeLogix
@@ -85,7 +85,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0 
           ref: ${{ github.ref }}
 
       - name: Set up Python
@@ -126,18 +126,19 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }} # pass the tag name correctly
+          tag_name: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install/Update GitHub CLI
+      - name: Install/Update GitHub CLI and Update PATH
         run: |
           gh --version
           curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
           sudo apt update
           sudo apt install gh --yes
           gh --version
+          echo "::add-path::$(dirname $(which gh))"
 
       - name: Upload Linux AppImage to Release
         shell: bash
