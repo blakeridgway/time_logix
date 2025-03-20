@@ -141,7 +141,13 @@ jobs:
           sudo apt update
           sudo apt install gh --yes
           gh --version
-          echo "::add-path::$(dirname $(which gh))"
+
+          # Get the directory where gh is installed
+          GH_PATH=$(dirname $(which gh))
+
+          # Add the path to the environment file
+          echo "GH_PATH=$GH_PATH" >> $GITHUB_ENV
+          echo "PATH=$GH_PATH:$PATH" >> $GITHUB_PATH
 
       - name: Upload Linux AppImage to Release
         shell: bash
@@ -151,6 +157,8 @@ jobs:
           --label "Linux AppImage"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_PATH: ${{ env.GH_PATH }}
+
 
       - name: Upload Windows EXE to Release
         shell: bash
