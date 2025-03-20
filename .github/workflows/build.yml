@@ -28,7 +28,7 @@ jobs:
         run: |
           pyinstaller --onefile --windowed time_logix.py
 
-      - name: Create AppDir and Files without Icon
+      - name: Create AppDir and Files
         run: |
           mkdir -p AppDir/usr/bin
           pyinstaller --onefile --windowed time_logix.py
@@ -40,15 +40,18 @@ jobs:
           exec "$HERE/usr/bin/time_logix" "$@"
           EOF
           chmod +x AppDir/AppRun
-          # Create desktop file without an icon reference
+          # Create desktop file with icon reference
           cat <<EOF > AppDir/time_logix.desktop
           [Desktop Entry]
           Type=Application
           Name=TimeLogix
           Exec=time_logix
+          Icon=appicon
           Comment=Time tracking app for contractors
           Categories=Utility;
           EOF
+          # Download a placeholder icon and save it as appicon.png in AppDir
+          wget -q -O AppDir/appicon.png https://placehold.co/256
 
       - name: Install FUSE library
         run: sudo apt-get update && sudo apt-get install -y libfuse2
