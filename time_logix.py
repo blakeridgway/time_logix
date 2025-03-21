@@ -57,6 +57,11 @@ class TimeLogix(tk.Tk):
 
         self.log_text = tk.Text(self, height=10, state=tk.DISABLED)
         self.log_text.pack(pady=5, padx=10, fill='both', expand=True)
+        
+        self.exit_button = tk.Button(
+        self, text="Exit", width=10, command=self.exit_app
+        )
+        self.exit_button.pack(pady=5)
 
     def log_message(self, message):
         if hasattr(self, 'log_text'):
@@ -225,6 +230,9 @@ class TimeLogix(tk.Tk):
 
         self.total_hours = total_duration.total_seconds() / 3600
         self.total_hours_label.config(text=f"Total Hours Worked: {self.total_hours:.2f}")
+
+    def exit_app(self):
+        self.destroy()
 
 if __name__ == "__main__":
     app = TimeLogix()
