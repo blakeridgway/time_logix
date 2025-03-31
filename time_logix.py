@@ -192,15 +192,42 @@ class TimeLogix(tk.Tk):
                 with open(filename, mode="r") as csvfile:
                     reader = csv.reader(csvfile)
                     header = next(reader, None)
+                    row_number = 1
+                    total_hours_loaded = False
 
                     for row in reader:
+                        if not row: 
+                            print(f"Skipping empty row: {row_number}")
+                            row_number += 1
+                            continue
+
                         if len(row) == 5:
                             start_time_str, end_time_str, duration_str, decimal_hours_str, description = row
                         elif len(row) == 4:
+                            if row[0] == '' and row[1] == '' and row[2] == '' and row[3] == 'Total Hours':
+                                try:
+                                    self.total_hours = float(row[4])
+                                    self.update_total_hours()
+                                    total_hours_loaded = True
+                                    print(f"Total hours loaded from row {row_number}: {self.total_hours}")
+                                    row_number += 1
+                                    continue
+
+                                except ValueError:
+                                    print(f"Skipping total hours row {row_number} due to parsing error")
+                                    row_number += 1
+                                    continue
+
                             start_time_str, end_time_str, duration_str, decimal_hours_str = row
                             description = ""
                         else:
-                            print(f"Skipping row with unexpected number of columns: {len(row)}")
+                            print(f"Skipping row with unexpected number of columns ({len(row)}): {row_number}")
+                            row_number += 1
+                            continue
+
+                        if not start_time_str or not end_time_str:
+                            print(f"Skipping row with missing time data: {row_number}")
+                            row_number += 1
                             continue
 
                         try:
@@ -213,12 +240,17 @@ class TimeLogix(tk.Tk):
                                 f"Duration: {duration_str}, Description: {description}"
                             )
                         except ValueError as ve:
-                            print(f"Skipping row due to parsing error: {ve}")
+                            print(f"Skipping row {row_number} due to parsing error: {ve}")
+                        row_number += 1 
+
+                    if not total_hours_loaded:
+                         self.update_total_hours() 
+                         print("Total hours row was not found so calculating from current rows!")
             except FileNotFoundError:
                 messagebox.showinfo("Info", "No CSV file found. Starting with a new session.")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load sessions from CSV: {e}")
-
+              
     def parse_duration(self, duration_str):
         hours, minutes, seconds = map(int, duration_str.split(':'))
         return timedelta(hours=hours, minutes=minutes, seconds=seconds)
