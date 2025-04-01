@@ -281,7 +281,7 @@ class TimeLogix:
 
     def export_to_csv(self):
         try:
-            with open("time_entries.csv", "w", newline="") as csvfile:
+            with open("working_sessions.csv", "w", newline="") as csvfile:
                 fieldnames = ["task", "project", "start_time", "end_time", "duration"]
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
