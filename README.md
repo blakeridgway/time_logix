@@ -1,38 +1,53 @@
 # TimeLogix
 
-TimeLogix is a simple, intuitive Tkinter-based time tracking application designed to help contractors log and manage their working hours effectively. This tool was created so I could keep proper track of time worked under a contract for a company, ensuring accurate record-keeping and easy export of session data for billing and reporting purposes.
+TimeLogix is a modern, intuitive time tracking application designed to help contractors log and manage their working hours effectively. This tool was created to keep proper track of time worked, ensuring accurate record-keeping and easy export of session data for billing, reporting, and invoice generation.
 
 ## Features
 
-- **Start/Stop Tracking:** Easily log your work sessions with start and stop buttons.
-- **Session Logging:** View session start times, end times, and durations both in \(H:MM:SS\) and decimal hours.
-- **CSV Export:** Export your session data to a CSV file for further processing or billing.
-- **Simple UI:** A clean and minimal user interface built using Tkinter.
+-   **Start/Stop Tracking:** Easily log your work sessions with start and stop buttons.
+-   **Session Logging:** View session start times, end times, and durations in H:MM:SS format.
+-   **Project Management:** Assign time entries to specific projects.
+-   **CSV Export:** Export session data to a CSV file for further processing or reporting.
+-   **PDF Invoice Generation:** Generate professional PDF invoices based on logged time entries.
+-   **Customizable Settings:** Configure company and client information, along with an hourly rate, for accurate invoice generation.
+-   **Modern UI:** Built using CustomTkinter for a sleek and user-friendly experience.
+-   **Scrollable Interface:** Ensures all elements are accessible, even on smaller screens.
 
 ## Requirements
 
-- Python 3.x
-- Tkinter (usually included with standard Python installations)
+-   Python 3.x
+-   CustomTkinter: `pip install customtkinter`
+-   reportlab: `pip install reportlab`
+-   csv (Included with Python)
+-   tkinter (Included with Python)
 
 ## Installation
 
-1. **Clone the Repository:**
+1.  **Clone the Repository:**
+
+    ```bash
+    git clone https://github.com/blakeridgway/time_logix.git
+    cd time_logix
+    ```
+
+2.  **(Optional) Create and Activate a Virtual Environment:**
+
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Linux/macOS
+    venv\Scripts\activate  # On Windows
+    ```
+
+3.  **Install Dependencies:**
 
    ```bash
-   git clone https://github.com/yourusername/timelogix.git
-   cd timelogix
+   pip install -r requirements.txt
    ```
+   or
 
-2. **(Optional) Create and Activate a Virtual Environment:**
-
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-   ```
-
-3. **Install Dependencies:**
-
-   There are no additional dependencies beyond the Python Standard Library. However, ensure you have the latest version of Python installed.
+    ```bash
+    pip install customtkinter reportlab
+    ```
 
 ## Usage
 
@@ -44,17 +59,39 @@ python time_logix.py
 
 ### How to Use
 
-1. **Start Tracking:**
-   - Click the **Start Tracking** button to log the starting time of your work session.
-2. **Stop Tracking:**
-   - Click the **Stop Tracking** button to end the session. The app will display and log the duration in both formats, e.g., `1:30:00` and `1.50 hours`.
-3. **Export Sessions:**
-   - Once you’re finished working, click the **Export Sessions** button to save your session data into `working_sessions.csv`.
+1.  **Start Tracking:**
 
-## Customizations
+    *   Click the **Start** button to begin tracking your work session.
 
-- **Decimal Hours:** The app calculates hours worked in decimal format using a helper function.
-- **CSV File Export:** Sessions are exported to a CSV file with headers: `Start Time`, `End Time`, `Duration (H:MM:SS)`, and `Decimal Hours`.
+2.  **Stop Tracking:**
+
+    *   Click the **Stop** button to end the session. The application will log the start and end times and calculate the duration.
+
+3.  **Enter Task Description and Project:**
+
+    *   Provide a brief description of the work completed and select the appropriate project from the dropdown menu.
+
+4.  **Add New Project:**
+
+    *   Enter a new project name in the "New Project" field and click "Add Project". The new project will be added to the project dropdown.
+
+5.  **Export Data:**
+
+    *   Click the "Export to CSV" button to save your session data to a CSV file ("working\_sessions.csv").
+    *   Click the "Export to PDF" button to generate an invoice as a PDF file (named "invoice\_\*.pdf", where \* is the incrementing invoice number).
+
+6.  **Update Settings:**
+
+    *   Fill out the company name, company address, client name, client address, and hourly rate fields.
+    *   Click "Update Settings" to save these values. These settings will be used when generating PDF invoices.
+
+7.  **Calculate Total Time:**
+
+    *   Click "Calculate Total Time" to display the sum of all recorded session durations.
+
+8.  **Exit:**
+
+    *   Click "Exit" to close the application.
 
 ## Contributing
 

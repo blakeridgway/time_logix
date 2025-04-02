@@ -1,271 +1,353 @@
+import customtkinter as ctk
 import tkinter as tk
-from tkinter import messagebox
-from datetime import datetime, timedelta
+from tkinter import ttk
+import time
+import datetime
 import csv
-import os
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.pdfgen import canvas
 from reportlab.lib import colors
+from reportlab.platypus import Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
+import sys
 
-class TimeLogix(tk.Tk):
+
+class TimeLogix:
     def __init__(self):
-        super().__init__()
-        self.title("TimeLogix")
-        self.geometry("500x500")
+        self.root = ctk.CTk()
+        self.root.title("TimeLogix")
 
+        # Theme Configuration
+        ctk.set_appearance_mode("Dark")  # Or "Light", "System"
+        ctk.set_default_color_theme("blue")
+
+        # --- Styling ---
+        self.font_family = "Segoe UI"
+        self.font_size = 12
+
+        # --- App Data ---
+        self.project_file = "projects.txt"
+        self.projects = self.load_projects()
+        self.is_running = False
         self.start_time = None
-        self.tracking = False
-        self.sessions = []
-        self.total_hours = 0
+        self.elapsed_time = 0
+        self.timer_id = None
+        self.log_entries = []
+        self.invoice_number = 1
+        self.company_name = "Your Company Name"
+        self.company_address = "123 Main St, Anytown, USA"
+        self.client_name = "Client Name"
+        self.client_address = "Client Address"
+        self.hourly_rate = 60.00
 
-        self.create_widgets()
-        self.load_sessions_from_csv()
-        self.update_total_hours()
+        # --- Scrollable Frame ---
+        self.scrollable_frame = ctk.CTkScrollableFrame(self.root, width=450, height=600) # Consider making height adaptable
+        self.scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-    def create_widgets(self):
-        self.status_label = tk.Label(self, text="Status: Not Tracking", font=("Helvetica", 12))
-        self.status_label.pack(pady=5)
+        # --- UI Elements ---
+        self.task_label = ctk.CTkLabel(self.scrollable_frame, text="Task Description:", font=(self.font_family, self.font_size))
+        self.task_label.pack(pady=(10, 2))
 
-        self.start_button = tk.Button(
-            self, text="Start Tracking", width=20, command=self.start_tracking
-        )
-        self.start_button.pack(pady=2)
+        self.task_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.task_entry.pack(pady=(2, 10))
 
-        self.stop_button = tk.Button(
-            self, text="Stop Tracking", width=20, command=self.stop_tracking, state=tk.DISABLED
-        )
-        self.stop_button.pack(pady=2)
+        self.project_label = ctk.CTkLabel(self.scrollable_frame, text="Project:", font=(self.font_family, self.font_size))
+        self.project_label.pack(pady=(10, 2))
 
-        self.description_label = tk.Label(self, text="Work Description:")
-        self.description_label.pack(pady=1)
-        self.description_entry = tk.Text(self, height=3, width=40)
-        self.description_entry.pack(pady=1)
+        self.project_combo = ctk.CTkComboBox(self.scrollable_frame, values=self.projects, width=250)
+        self.project_combo.pack(pady=(2, 10))
+        if self.projects:
+            self.project_combo.set(self.projects[0])
 
-        self.export_csv_button = tk.Button(
-            self, text="Export to CSV", width=20, command=self.export_sessions_csv
-        )
-        self.export_csv_button.pack(pady=2)
+        self.time_label = ctk.CTkLabel(self.scrollable_frame, text="00:00:00", font=(self.font_family, 36))
+        self.time_label.pack(pady=(15, 20))
 
-        self.export_pdf_button = tk.Button(
-            self, text="Export to PDF", width=20, command=self.export_sessions_pdf
-        )
-        self.export_pdf_button.pack(pady=2)
+        self.start_stop_button = ctk.CTkButton(self.scrollable_frame, text="Start", command=self.toggle_timer, corner_radius=8)
+        self.start_stop_button.pack(pady=(5, 20))
 
-        self.total_hours_label = tk.Label(self, text="Total Hours Worked: 0.00", font=("Helvetica", 12))
-        self.total_hours_label.pack(pady=5)
+        self.log_label = ctk.CTkLabel(self.scrollable_frame, text="Log Entries:", font=(self.font_family, self.font_size))
+        self.log_label.pack(pady=(10, 2))
 
-        self.log_text = tk.Text(self, height=10, state=tk.DISABLED)
+        self.log_text = ctk.CTkTextbox(self.scrollable_frame, width=400, height=100, font=(self.font_family, self.font_size))
         self.log_text.pack(pady=5, padx=10, fill='both', expand=True)
-        
-        self.exit_button = tk.Button(
-        self, text="Exit", width=10, command=self.exit_app
-        )
-        self.exit_button.pack(pady=5)
 
-    def log_message(self, message):
-        if hasattr(self, 'log_text'):
-            self.log_text.configure(state=tk.NORMAL)
-            self.log_text.insert(tk.END, f"{message}\n")
-            self.log_text.configure(state=tk.DISABLED)
-            self.log_text.see(tk.END)
+        self.new_project_label = ctk.CTkLabel(self.scrollable_frame, text="New Project:", font=(self.font_family, self.font_size))
+        self.new_project_label.pack(pady=(10, 2))
 
-    def start_tracking(self):
-        if self.tracking:
-            messagebox.showwarning("Warning", "Already tracking!")
-            return
+        self.new_project_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.new_project_entry.pack(pady=(2, 10))
 
-        self.start_time = datetime.now()
-        self.tracking = True
-        self.status_label.config(
-            text=f"Status: Tracking started at {self.start_time.strftime('%H:%M:%S')}"
-        )
-        self.log_message(f"Started at: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        self.start_button.config(state=tk.DISABLED)
-        self.stop_button.config(state=tk.NORMAL)
+        self.add_project_button = ctk.CTkButton(self.scrollable_frame, text="Add Project", command=self.add_project, corner_radius=8)
+        self.add_project_button.pack(pady=(5, 15))
 
-    def stop_tracking(self):
-        if not self.tracking:
-            messagebox.showwarning("Warning", "Not currently tracking!")
-            return
+        # --- Button Frame ---
+        button_frame = ctk.CTkFrame(self.scrollable_frame)
+        button_frame.pack(pady=(10, 15))
 
-        end_time = datetime.now()
-        duration = end_time - self.start_time
-        description = self.description_entry.get("1.0", tk.END).strip()
-        self.sessions.append((self.start_time, end_time, duration, description))
-        self.tracking = False
-        self.status_label.config(text="Status: Not Tracking")
-        decimal_hours = self.get_decimal_hours(duration)
-        self.log_message(
-            f"Stopped at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}, Duration: {self.format_duration(duration)} "
-            f"({decimal_hours:.2f} hours), Description: {description}"
-        )
-        self.start_button.config(state=tk.NORMAL)
-        self.stop_button.config(state=tk.DISABLED)
-        self.description_entry.delete("1.0", tk.END)
+        self.export_csv_button = ctk.CTkButton(button_frame, text="Export to CSV", command=self.export_to_csv, corner_radius=8)
+        self.export_csv_button.pack(side="left", padx=5, pady=5)  # Using side="left" for horizontal layout
 
-        self.update_total_hours()
+        self.export_pdf_button = ctk.CTkButton(button_frame, text="Export to PDF", command=self.export_to_pdf, corner_radius=8)
+        self.export_pdf_button.pack(side="left", padx=5, pady=5)
 
-    def format_duration(self, duration):
-        total_seconds = int(duration.total_seconds())
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
-        seconds = total_seconds % 60
-        return f"{hours}:{minutes:02d}:{seconds:02d}"
+        self.exit_button = ctk.CTkButton(button_frame, text="Exit", command=self.exit_app, corner_radius=8)
+        self.exit_button.pack(side="left", padx=5, pady=5)
 
-    def get_decimal_hours(self, duration):
-        total_hours = duration.total_seconds() / 3600
-        return total_hours
+        self.total_time_button = ctk.CTkButton(self.scrollable_frame, text="Calculate Total Time", command=self.calculate_total_time, corner_radius=8)
+        self.total_time_button.pack(pady=(5, 15))
 
-    def export_sessions_csv(self):
-        if not self.sessions:
-            messagebox.showinfo("Info", "No sessions to export.")
-            return
+        self.total_time_label = ctk.CTkLabel(self.scrollable_frame, text="Total Time: 00:00:00", font=(self.font_family, self.font_size))
+        self.total_time_label.pack(pady=(5, 15))
 
-        filename = "working_sessions.csv"
+        # --- Settings UI ---
+        self.company_name_label = ctk.CTkLabel(self.scrollable_frame, text="Company Name:", font=(self.font_family, self.font_size))
+        self.company_name_label.pack(pady=(10, 2))
+
+        self.company_name_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.company_name_entry.pack(pady=(2, 10))
+
+        self.company_address_label = ctk.CTkLabel(self.scrollable_frame, text="Company Address:", font=(self.font_family, self.font_size))
+        self.company_address_label.pack(pady=(10, 2))
+
+        self.company_address_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.company_address_entry.pack(pady=(2, 10))
+
+        self.client_name_label = ctk.CTkLabel(self.scrollable_frame, text="Client Name:", font=(self.font_family, self.font_size))
+        self.client_name_label.pack(pady=(10, 2))
+
+        self.client_name_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.client_name_entry.pack(pady=(2, 10))
+
+        self.client_address_label = ctk.CTkLabel(self.scrollable_frame, text="Client Address:", font=(self.font_family, self.font_size))
+        self.client_address_label.pack(pady=(10, 2))
+
+        self.client_address_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.client_address_entry.pack(pady=(2, 10))
+
+        self.hourly_rate_label = ctk.CTkLabel(self.scrollable_frame, text="Hourly Rate:", font=(self.font_family, self.font_size))
+        self.hourly_rate_label.pack(pady=(10, 2))
+
+        self.hourly_rate_entry = ctk.CTkEntry(self.scrollable_frame, width=100)
+        self.hourly_rate_entry.pack(pady=(2, 10))
+
+        self.update_settings_button = ctk.CTkButton(self.scrollable_frame, text="Update Settings", command=self.update_settings, corner_radius=8)
+        self.update_settings_button.pack(pady=(15, 20))
+
+    def load_projects(self):
         try:
-            with open(filename, mode="w", newline="") as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow([
-                    "Start Time", "End Time",
-                    "Duration (H:MM:SS)", "Decimal Hours", "Description"
-                ])
-                for start, end, duration, description in self.sessions:
-                    writer.writerow([
-                        start.strftime("%Y-%m-%d %H:%M:%S"),
-                        end.strftime("%Y-%m-%d %H:%M:%S"),
-                        self.format_duration(duration),
-                        f"{self.get_decimal_hours(duration):.2f}",
-                        description
-                    ])
-                writer.writerow(["", "", "", "Total Hours", f"{self.total_hours:.2f}"])
-            messagebox.showinfo("Export Successful", f"Sessions exported to {filename}")
+            with open(self.project_file, "r") as f:
+                projects = [line.strip() for line in f]
+            return projects
+        except FileNotFoundError:
+            return []
+
+    def save_projects(self):
+        try:
+            with open(self.project_file, "w") as f:
+                for project in self.projects:
+                    f.write(project + "\n")
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to export: {e}")
+            print(f"Error saving projects: {e}")
 
-    def export_sessions_pdf(self):
-        if not self.sessions:
-            messagebox.showinfo("Info", "No sessions to export.")
-            return
+    def add_project(self):
+        new_project = self.new_project_entry.get().strip()
+        if new_project and new_project not in self.projects:
+            self.projects.append(new_project)
+            self.project_combo.configure(values=self.projects)
+            self.project_combo.set(new_project)
+            self.save_projects()
+            self.new_project_entry.delete(0, tk.END)
+        elif new_project in self.projects:
+            print("Project already exists.")
+        else:
+            print("Project name cannot be empty.")
 
-        filename = "working_sessions.pdf"
+    def update_settings(self):
+        self.company_name = self.company_name_entry.get()
+        self.company_address = self.company_address_entry.get()
+        self.client_name = self.client_name_entry.get()
+        self.client_address = self.client_address_entry.get()
         try:
-            doc = SimpleDocTemplate(filename, pagesize=letter)
-            elements = []
+            self.hourly_rate = float(self.hourly_rate_entry.get())
+        except ValueError:
+            print("Invalid hourly rate. Using default.")
+            self.hourly_rate = 50.00
 
-            data = [
-                ["Start Time", "End Time", "Duration (H:MM:SS)", "Decimal Hours", "Description"]
-            ]
-            for start, end, duration, description in self.sessions:
-                data.append([
-                    start.strftime("%Y-%m-%d %H:%M:%S"),
-                    end.strftime("%Y-%m-%d %H:%M:%S"),
-                    self.format_duration(duration),
-                    f"{self.get_decimal_hours(duration):.2f}",
-                    description
-                ])
+    def toggle_timer(self):
+        if self.is_running:
+            self.stop_timer()
+        else:
+            self.start_timer()
 
-            data.append(["", "", "", "Total Hours", f"{self.total_hours:.2f}"])
+    def start_timer(self):
+        self.is_running = True
+        self.start_stop_button.configure(text="Stop")
+        self.start_time = time.time()
+        self.update_timer()
 
-            table = Table(data)
-            style = TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ])
+    def stop_timer(self):
+        self.is_running = False
+        self.start_stop_button.configure(text="Start")
+        self.root.after_cancel(self.timer_id)
+        self.log_time_entry()
+
+    def update_timer(self):
+        if self.is_running:
+            self.elapsed_time = time.time() - self.start_time
+            minutes, seconds = divmod(self.elapsed_time, 60)
+            hours, minutes = divmod(minutes, 60)
+            time_str = "{:02d}:{:02d}:{:02d}".format(
+                int(hours), int(minutes), int(seconds)
+            )
+            self.time_label.configure(text=time_str)
+            self.timer_id = self.root.after(100, self.update_timer)
+
+    def log_time_entry(self):
+        end_time = datetime.datetime.now()
+        task_description = self.task_entry.get()
+        project = self.project_combo.get()
+        duration = self.elapsed_time
+        start_time_str = end_time - datetime.timedelta(seconds=duration)
+
+        entry = {
+            "task": task_description,
+            "project": project,
+            "start_time": start_time_str.strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "duration": round(duration, 2),
+        }
+        self.log_entries.append(entry)
+        self.update_log_display()
+        self.elapsed_time = 0
+        self.time_label.configure(text="00:00:00")
+
+    def update_log_display(self):
+        self.log_text.delete("1.0", tk.END)
+        for entry in self.log_entries:
+            self.log_text.insert(tk.END, f"Task: {entry['task']}\n")
+            self.log_text.insert(tk.END, f"Project: {entry['project']}\n")
+            self.log_text.insert(tk.END, f"Start: {entry['start_time']}\n")
+            self.log_text.insert(tk.END, f"End: {entry['end_time']}\n")
+            self.log_text.insert(tk.END, f"Duration: {entry['duration']} seconds\n")
+            self.log_text.insert(tk.END, "-" * 20 + "\n")
+
+    def export_to_csv(self):
+        try:
+            with open("working_sessions.csv", "w", newline="") as csvfile:
+                fieldnames = ["task", "project", "start_time", "end_time", "duration"]
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                for entry in self.log_entries:
+                    writer.writerow(entry)
+            print("Exported to CSV successfully!")
+        except Exception as e:
+            print(f"Error exporting to CSV: {e}")
+
+    def export_to_pdf(self):
+        try:
+            filename = f"invoice_{self.invoice_number}.pdf"
+            c = canvas.Canvas(filename, pagesize=letter)
+            styles = getSampleStyleSheet()
+
+            # --- Header ---
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(inch, 7.5 * inch, self.company_name)
+            c.setFont("Helvetica", 10)
+            c.drawString(inch, 7.3 * inch, self.company_address)
+
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(4.5 * inch, 7.5 * inch, "Invoice")
+            c.setFont("Helvetica", 10)
+            c.drawString(
+                4.5 * inch, 7.3 * inch, f"Invoice Number: {self.invoice_number}"
+            )
+            current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+            c.drawString(4.5 * inch, 7.1 * inch, f"Date: {current_date}")
+
+            # --- Client Info ---
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(inch, 6.5 * inch, "Bill To:")
+            c.setFont("Helvetica", 10)
+            c.drawString(inch, 6.3 * inch, self.client_name)
+            c.drawString(inch, 6.1 * inch, self.client_address)
+
+            # --- Table ---
+            data = [["Task", "Project", "Hours", "Rate", "Total"]]
+            total_amount = 0
+
+            for entry in self.log_entries:
+                hours = entry["duration"] / 3600
+                line_total = hours * self.hourly_rate
+                total_amount += line_total
+                data.append(
+                    [
+                        entry["task"],
+                        entry["project"],
+                        f"{hours:.2f}",
+                        f"${self.hourly_rate:.2f}",
+                        f"${line_total:.2f}",
+                    ]
+                )
+
+            table = Table(data, colWidths=[1.5 * inch, 1.5 * inch, inch, inch, inch])
+            style = TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ]
+            )
             table.setStyle(style)
-            elements.append(table)
+            table.wrapOn(c, letter[0] - 2 * inch, letter[1] - 2 * inch)
+            table.drawOn(c, inch, 4 * inch)
 
-            doc.build(elements)
-            messagebox.showinfo("Export Successful", f"Sessions exported to {filename}")
+            # --- Totals ---
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(4 * inch, 3.5 * inch, "Subtotal:")
+            c.setFont("Helvetica", 12)
+            c.drawRightString(5.5 * inch, 3.5 * inch, f"${total_amount:.2f}")
+
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(4 * inch, 3.3 * inch, "Tax (0%):")
+            c.setFont("Helvetica", 12)
+            c.drawRightString(5.5 * inch, 3.3 * inch, "$0.00")
+
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(4 * inch, 3.1 * inch, "Total:")
+            c.setFont("Helvetica", 12)
+            c.drawRightString(5.5 * inch, 3.1 * inch, f"${total_amount:.2f}")
+
+            # --- Notes ---
+            c.setFont("Helvetica", 10)
+            c.drawString(inch, 2 * inch, "Notes:")
+            c.drawString(inch, 1.8 * inch, "Thank you for your business!")
+
+            c.save()
+            print(f"Exported to PDF successfully as {filename}!")
+            self.invoice_number += 1
+
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to export: {e}")
+            print(f"Error exporting to PDF: {e}")
 
-    def load_sessions_from_csv(self):
-        filename = "working_sessions.csv"
-        if os.path.exists(filename):
-            try:
-                with open(filename, mode="r") as csvfile:
-                    reader = csv.reader(csvfile)
-                    header = next(reader, None)
-                    row_number = 1
-                    total_hours_loaded = False
-
-                    for row in reader:
-                        if not row: 
-                            print(f"Skipping empty row: {row_number}")
-                            row_number += 1
-                            continue
-
-                        if len(row) == 5:
-                            start_time_str, end_time_str, duration_str, decimal_hours_str, description = row
-                        elif len(row) == 4:
-                            if row[0] == '' and row[1] == '' and row[2] == '' and row[3] == 'Total Hours':
-                                try:
-                                    self.total_hours = float(row[4])
-                                    self.update_total_hours()
-                                    total_hours_loaded = True
-                                    print(f"Total hours loaded from row {row_number}: {self.total_hours}")
-                                    row_number += 1
-                                    continue
-
-                                except ValueError:
-                                    print(f"Skipping total hours row {row_number} due to parsing error")
-                                    row_number += 1
-                                    continue
-
-                            start_time_str, end_time_str, duration_str, decimal_hours_str = row
-                            description = ""
-                        else:
-                            print(f"Skipping row with unexpected number of columns ({len(row)}): {row_number}")
-                            row_number += 1
-                            continue
-
-                        if not start_time_str or not end_time_str:
-                            print(f"Skipping row with missing time data: {row_number}")
-                            row_number += 1
-                            continue
-
-                        try:
-                            start_time = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
-                            end_time = datetime.strptime(end_time_str, "%Y-%m-%d %H:%M:%S")
-                            duration = self.parse_duration(duration_str)
-                            self.sessions.append((start_time, end_time, duration, description))
-                            self.log_message(
-                                f"Loaded: {start_time.strftime('%Y-%m-%d %H:%M:%S')} - {end_time.strftime('%Y-%m-%d %H:%M:%S')}, "
-                                f"Duration: {duration_str}, Description: {description}"
-                            )
-                        except ValueError as ve:
-                            print(f"Skipping row {row_number} due to parsing error: {ve}")
-                        row_number += 1 
-
-                    if not total_hours_loaded:
-                         self.update_total_hours() 
-                         print("Total hours row was not found so calculating from current rows!")
-            except FileNotFoundError:
-                messagebox.showinfo("Info", "No CSV file found. Starting with a new session.")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to load sessions from CSV: {e}")
-              
-    def parse_duration(self, duration_str):
-        hours, minutes, seconds = map(int, duration_str.split(':'))
-        return timedelta(hours=hours, minutes=minutes, seconds=seconds)
-
-    def update_total_hours(self):
-        total_duration = timedelta()
-        for start, end, duration, description in self.sessions:
-            total_duration += duration
-
-        self.total_hours = total_duration.total_seconds() / 3600
-        self.total_hours_label.config(text=f"Total Hours Worked: {self.total_hours:.2f}")
+    def calculate_total_time(self):
+        total_seconds = sum(entry["duration"] for entry in self.log_entries)
+        minutes, seconds = divmod(total_seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+        time_str = "{:02d}:{:02d}:{:02d}".format(
+            int(hours), int(minutes), int(seconds)
+        )
+        self.total_time_label.configure(text=f"Total Time: {time_str}")
 
     def exit_app(self):
-        self.destroy()
+        self.root.destroy()
+        sys.exit()
+
 
 if __name__ == "__main__":
     app = TimeLogix()
-    app.mainloop()
+    app.root.mainloop()
