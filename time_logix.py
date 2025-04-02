@@ -1,3 +1,4 @@
+import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk
 import time
@@ -9,51 +10,30 @@ from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
-import sys  # Import the sys module
+import sys
 
 
 class TimeLogix:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("TimeLogix Application")
+    def __init__(self):
+        self.root = ctk.CTk()
+        self.root.title("TimeLogix")
 
-        # Styling
-        self.bg_color = "#f0f0f0"  # Light gray background
-        self.font_family = "Segoe UI"  # Modern font
-        self.font_size = 10
-        self.button_bg = "#4CAF50"  # Green button background
-        self.button_fg = "white"  # White button text
-        self.button_width = 15  # Consistent button width
+        # Theme Configuration
+        ctk.set_appearance_mode("Dark")  # Or "Light", "System"
+        ctk.set_default_color_theme("blue")
 
-        self.root.configure(bg=self.bg_color)
+        # --- Styling ---
+        self.font_family = "Segoe UI"
+        self.font_size = 12
 
-        style = ttk.Style()
-        style.configure(
-            "TLabel", background=self.bg_color, font=(self.font_family, self.font_size)
-        )
-        style.configure(
-            "TButton",
-            background=self.button_bg,
-            foreground=self.button_fg,
-            font=(self.font_family, self.font_size),
-            padding=5,
-            width=self.button_width,  # Set button width here
-        )
-        style.configure(
-            "TCombobox", background="white", font=(self.font_family, self.font_size)
-        )
-        style.configure(
-            "TEntry", background="white", font=(self.font_family, self.font_size)
-        )
-        style.configure("My.TFrame", background=self.bg_color)  # Frame style
-
+        # --- App Data ---
+        self.project_file = "projects.txt"
+        self.projects = self.load_projects()
         self.is_running = False
         self.start_time = None
         self.elapsed_time = 0
         self.timer_id = None
         self.log_entries = []
-        self.project_file = "projects.txt"
-        self.projects = self.load_projects()
         self.invoice_number = 1
         self.company_name = "Your Company Name"
         self.company_address = "123 Main St, Anytown, USA"
@@ -61,123 +41,98 @@ class TimeLogix:
         self.client_address = "Client Address"
         self.hourly_rate = 60.00
 
-        # UI elements
-        self.task_label = ttk.Label(root, text="Task Description:")
-        self.task_label.grid(row=0, column=0, sticky=tk.W, padx=10, pady=5)
-        self.task_entry = ttk.Entry(root, width=40)
-        self.task_entry.grid(row=0, column=1, sticky=tk.W, padx=10, pady=5)
+        # --- Scrollable Frame ---
+        self.scrollable_frame = ctk.CTkScrollableFrame(self.root, width=450, height=600) # Consider making height adaptable
+        self.scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        self.project_label = ttk.Label(root, text="Project:")
-        self.project_label.grid(row=1, column=0, sticky=tk.W, padx=10, pady=5)
-        self.project_combo = ttk.Combobox(root, values=self.projects)
-        self.project_combo.grid(row=1, column=1, sticky=tk.W, padx=10, pady=5)
+        # --- UI Elements ---
+        self.task_label = ctk.CTkLabel(self.scrollable_frame, text="Task Description:", font=(self.font_family, self.font_size))
+        self.task_label.pack(pady=(10, 2))
+
+        self.task_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.task_entry.pack(pady=(2, 10))
+
+        self.project_label = ctk.CTkLabel(self.scrollable_frame, text="Project:", font=(self.font_family, self.font_size))
+        self.project_label.pack(pady=(10, 2))
+
+        self.project_combo = ctk.CTkComboBox(self.scrollable_frame, values=self.projects, width=250)
+        self.project_combo.pack(pady=(2, 10))
         if self.projects:
             self.project_combo.set(self.projects[0])
 
-        self.time_label = ttk.Label(
-            root, text="00:00:00", font=(self.font_family, 36)
-        )  # Larger time
-        self.time_label.grid(row=2, column=0, columnspan=2, pady=15)
+        self.time_label = ctk.CTkLabel(self.scrollable_frame, text="00:00:00", font=(self.font_family, 36))
+        self.time_label.pack(pady=(15, 20))
 
-        self.start_stop_button = ttk.Button(
-            root, text="Start", command=self.toggle_timer
-        )
-        self.start_stop_button.grid(row=3, column=0, columnspan=2, pady=10)
+        self.start_stop_button = ctk.CTkButton(self.scrollable_frame, text="Start", command=self.toggle_timer, corner_radius=8)
+        self.start_stop_button.pack(pady=(5, 20))
 
-        self.log_label = ttk.Label(root, text="Log Entries:")
-        self.log_label.grid(row=4, column=0, sticky=tk.W, padx=10, pady=5)
+        self.log_label = ctk.CTkLabel(self.scrollable_frame, text="Log Entries:", font=(self.font_family, self.font_size))
+        self.log_label.pack(pady=(10, 2))
 
-        self.log_text = tk.Text(
-            root,
-            height=10,
-            width=50,
-            bg="white",
-            font=(self.font_family, self.font_size),
-        )
-        self.log_text.grid(row=5, column=0, columnspan=2, padx=10, pady=5)
+        self.log_text = ctk.CTkTextbox(self.scrollable_frame, width=400, height=100, font=(self.font_family, self.font_size))
+        self.log_text.pack(pady=5, padx=10, fill='both', expand=True)
 
-        # Add Project UI
-        self.new_project_label = ttk.Label(root, text="New Project:")
-        self.new_project_label.grid(row=6, column=0, sticky=tk.W, padx=10, pady=5)
-        self.new_project_entry = ttk.Entry(root, width=30)
-        self.new_project_entry.grid(row=6, column=1, sticky=tk.W, padx=10, pady=5)
+        self.new_project_label = ctk.CTkLabel(self.scrollable_frame, text="New Project:", font=(self.font_family, self.font_size))
+        self.new_project_label.pack(pady=(10, 2))
 
-        self.add_project_button = ttk.Button(
-            root, text="Add Project", command=self.add_project
-        )
-        self.add_project_button.grid(row=7, column=0, columnspan=2, pady=5)
+        self.new_project_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.new_project_entry.pack(pady=(2, 10))
 
-        # Button Grouping
-        button_frame = ttk.Frame(root, padding=10, style="My.TFrame")
-        button_frame.grid(row=8, column=0, columnspan=2, pady=10)
+        self.add_project_button = ctk.CTkButton(self.scrollable_frame, text="Add Project", command=self.add_project, corner_radius=8)
+        self.add_project_button.pack(pady=(5, 15))
 
-        self.export_csv_button = ttk.Button(
-            button_frame, text="Export to CSV", command=self.export_to_csv
-        )
-        self.export_csv_button.grid(row=0, column=0, padx=5, pady=5)
+        # --- Button Frame ---
+        button_frame = ctk.CTkFrame(self.scrollable_frame)
+        button_frame.pack(pady=(10, 15))
 
-        self.export_pdf_button = ttk.Button(
-            button_frame, text="Export to PDF", command=self.export_to_pdf
-        )
-        self.export_pdf_button.grid(row=0, column=1, padx=5, pady=5)
+        self.export_csv_button = ctk.CTkButton(button_frame, text="Export to CSV", command=self.export_to_csv, corner_radius=8)
+        self.export_csv_button.pack(side="left", padx=5, pady=5)  # Using side="left" for horizontal layout
 
-        self.exit_button = ttk.Button(  # Create Exit button
-            button_frame, text="Exit", command=self.exit_app
-        )
-        self.exit_button.grid(row=0, column=2, padx=5, pady=5)  # Place in button_frame
+        self.export_pdf_button = ctk.CTkButton(button_frame, text="Export to PDF", command=self.export_to_pdf, corner_radius=8)
+        self.export_pdf_button.pack(side="left", padx=5, pady=5)
 
-        self.total_time_button = ttk.Button(
-            root,
-            text="Calculate Total Time",
-            command=self.calculate_total_time,
-            width=20,  # Set specific width for this button
-        )
-        self.total_time_button.grid(row=9, column=0, columnspan=2, pady=5)
+        self.exit_button = ctk.CTkButton(button_frame, text="Exit", command=self.exit_app, corner_radius=8)
+        self.exit_button.pack(side="left", padx=5, pady=5)
 
-        self.total_time_label = ttk.Label(root, text="Total Time: 00:00:00")
-        self.total_time_label.grid(row=10, column=0, columnspan=2, pady=5)
+        self.total_time_button = ctk.CTkButton(self.scrollable_frame, text="Calculate Total Time", command=self.calculate_total_time, corner_radius=8)
+        self.total_time_button.pack(pady=(5, 15))
 
-        # Settings UI
-        self.company_name_label = ttk.Label(root, text="Company Name:")
-        self.company_name_label.grid(row=11, column=0, sticky=tk.W, padx=10, pady=5)
-        self.company_name_entry = ttk.Entry(root, width=30)
-        self.company_name_entry.grid(row=11, column=1, sticky=tk.W, padx=10, pady=5)
-        self.company_name_entry.insert(0, self.company_name)
+        self.total_time_label = ctk.CTkLabel(self.scrollable_frame, text="Total Time: 00:00:00", font=(self.font_family, self.font_size))
+        self.total_time_label.pack(pady=(5, 15))
 
-        self.company_address_label = ttk.Label(root, text="Company Address:")
-        self.company_address_label.grid(row=12, column=0, sticky=tk.W, padx=10, pady=5)
-        self.company_address_entry = ttk.Entry(root, width=30)
-        self.company_address_entry.grid(row=12, column=1, sticky=tk.W, padx=10, pady=5)
-        self.company_address_entry.insert(0, self.company_address)
+        # --- Settings UI ---
+        self.company_name_label = ctk.CTkLabel(self.scrollable_frame, text="Company Name:", font=(self.font_family, self.font_size))
+        self.company_name_label.pack(pady=(10, 2))
 
-        self.client_name_label = ttk.Label(root, text="Client Name:")
-        self.client_name_label.grid(row=13, column=0, sticky=tk.W, padx=10, pady=5)
-        self.client_name_entry = ttk.Entry(root, width=30)
-        self.client_name_entry.grid(row=13, column=1, sticky=tk.W, padx=10, pady=5)
-        self.client_name_entry.insert(0, self.client_name)
+        self.company_name_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.company_name_entry.pack(pady=(2, 10))
 
-        self.client_address_label = ttk.Label(root, text="Client Address:")
-        self.client_address_label.grid(row=14, column=0, sticky=tk.W, padx=10, pady=5)
-        self.client_address_entry = ttk.Entry(root, width=30)
-        self.client_address_entry.grid(row=14, column=1, sticky=tk.W, padx=10, pady=5)
-        self.client_address_entry.insert(0, self.client_address)
+        self.company_address_label = ctk.CTkLabel(self.scrollable_frame, text="Company Address:", font=(self.font_family, self.font_size))
+        self.company_address_label.pack(pady=(10, 2))
 
-        self.hourly_rate_label = ttk.Label(root, text="Hourly Rate:")
-        self.hourly_rate_label.grid(row=15, column=0, sticky=tk.W, padx=10, pady=5)
-        self.hourly_rate_entry = ttk.Entry(root, width=10)
-        self.hourly_rate_entry.grid(row=15, column=1, sticky=tk.W, padx=10, pady=5)
-        self.hourly_rate_entry.insert(0, str(self.hourly_rate))
+        self.company_address_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.company_address_entry.pack(pady=(2, 10))
 
-        self.update_settings_button = ttk.Button(
-            root, text="Update Settings", command=self.update_settings
-        )
-        self.update_settings_button.grid(row=16, column=0, columnspan=2, pady=10)
+        self.client_name_label = ctk.CTkLabel(self.scrollable_frame, text="Client Name:", font=(self.font_family, self.font_size))
+        self.client_name_label.pack(pady=(10, 2))
 
-        # Configure grid weights to make the layout expand
-        for i in range(17):
-            root.grid_rowconfigure(i, weight=1)
-        root.grid_columnconfigure(0, weight=1)
-        root.grid_columnconfigure(1, weight=1)
+        self.client_name_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.client_name_entry.pack(pady=(2, 10))
+
+        self.client_address_label = ctk.CTkLabel(self.scrollable_frame, text="Client Address:", font=(self.font_family, self.font_size))
+        self.client_address_label.pack(pady=(10, 2))
+
+        self.client_address_entry = ctk.CTkEntry(self.scrollable_frame, width=250)
+        self.client_address_entry.pack(pady=(2, 10))
+
+        self.hourly_rate_label = ctk.CTkLabel(self.scrollable_frame, text="Hourly Rate:", font=(self.font_family, self.font_size))
+        self.hourly_rate_label.pack(pady=(10, 2))
+
+        self.hourly_rate_entry = ctk.CTkEntry(self.scrollable_frame, width=100)
+        self.hourly_rate_entry.pack(pady=(2, 10))
+
+        self.update_settings_button = ctk.CTkButton(self.scrollable_frame, text="Update Settings", command=self.update_settings, corner_radius=8)
+        self.update_settings_button.pack(pady=(15, 20))
 
     def load_projects(self):
         try:
@@ -199,14 +154,14 @@ class TimeLogix:
         new_project = self.new_project_entry.get().strip()
         if new_project and new_project not in self.projects:
             self.projects.append(new_project)
-            self.project_combo["values"] = self.projects  # Update Combobox
-            self.project_combo.set(new_project)  # Set to the new project
+            self.project_combo.configure(values=self.projects)
+            self.project_combo.set(new_project)
             self.save_projects()
-            self.new_project_entry.delete(0, tk.END)  # Clear the entry
+            self.new_project_entry.delete(0, tk.END)
         elif new_project in self.projects:
-            print("Project already exists.")  # Replace with a GUI message box
+            print("Project already exists.")
         else:
-            print("Project name cannot be empty.")  # Replace with a GUI message box
+            print("Project name cannot be empty.")
 
     def update_settings(self):
         self.company_name = self.company_name_entry.get()
@@ -216,10 +171,8 @@ class TimeLogix:
         try:
             self.hourly_rate = float(self.hourly_rate_entry.get())
         except ValueError:
-            print("Invalid hourly rate.  Using default.")  # Replace with GUI message
-            self.hourly_rate = 50.00  # Revert to default, or handle the error
-
-        # OPTIONAL: Save settings to a file here (e.g., JSON)
+            print("Invalid hourly rate. Using default.")
+            self.hourly_rate = 50.00
 
     def toggle_timer(self):
         if self.is_running:
@@ -229,13 +182,13 @@ class TimeLogix:
 
     def start_timer(self):
         self.is_running = True
-        self.start_stop_button.config(text="Stop")
+        self.start_stop_button.configure(text="Stop")
         self.start_time = time.time()
         self.update_timer()
 
     def stop_timer(self):
         self.is_running = False
-        self.start_stop_button.config(text="Start")
+        self.start_stop_button.configure(text="Start")
         self.root.after_cancel(self.timer_id)
         self.log_time_entry()
 
@@ -247,7 +200,7 @@ class TimeLogix:
             time_str = "{:02d}:{:02d}:{:02d}".format(
                 int(hours), int(minutes), int(seconds)
             )
-            self.time_label.config(text=time_str)
+            self.time_label.configure(text=time_str)
             self.timer_id = self.root.after(100, self.update_timer)
 
     def log_time_entry(self):
@@ -267,7 +220,7 @@ class TimeLogix:
         self.log_entries.append(entry)
         self.update_log_display()
         self.elapsed_time = 0
-        self.time_label.config(text="00:00:00")
+        self.time_label.configure(text="00:00:00")
 
     def update_log_display(self):
         self.log_text.delete("1.0", tk.END)
@@ -388,14 +341,13 @@ class TimeLogix:
         time_str = "{:02d}:{:02d}:{:02d}".format(
             int(hours), int(minutes), int(seconds)
         )
-        self.total_time_label.config(text=f"Total Time: {time_str}")
+        self.total_time_label.configure(text=f"Total Time: {time_str}")
 
-    def exit_app(self):  # Define the exit_app method
-        self.root.destroy()  # Close the Tkinter window
+    def exit_app(self):
+        self.root.destroy()
         sys.exit()
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = TimeLogix(root)
-    root.mainloop()
+    app = TimeLogix()
+    app.root.mainloop()
