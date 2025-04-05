@@ -2,3 +2,5 @@ venv
 *.csv
 *.pdf
 *.txt
+*.db
+__pycache__
