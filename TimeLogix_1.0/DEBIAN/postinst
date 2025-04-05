@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+cat <<EOF > /usr/share/applications/TimeLogix.desktop
+[Desktop Entry]
+Name=TimeLogix
+Comment=Time tracking application
+Exec=/opt/timelogix/TimeLogix
+#Icon=/opt/timelogix/icon.ico # If you have an icon
+Terminal=false
+Type=Application
+Categories=Utility;
+EOF
+
+exit 0
