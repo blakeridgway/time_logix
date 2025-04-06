@@ -1,0 +1,10 @@
+Package: timelogix
+Version: 1.0
+Architecture: amd64
+Maintainer: Blake Ridgway <blake@blakeridgway.com>
+Description: A simple time tracking application.
+ Long description of the application.  You can
+ add multiple lines here.
+Depends: python3, python3-tk
+Section: utils
+Priority: optional

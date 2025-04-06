@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+
+# Remove desktop entry
+rm /usr/share/applications/TimeLogix.desktop
+
+exit 0
+w
