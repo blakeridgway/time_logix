@@ -1,4 +1,3 @@
-# timelogix/ui/main_window.py
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk
@@ -15,21 +14,17 @@ class MainWindow(ctk.CTk):
         self.pdf_exporter = pdf_exporter
         self.title("TimeLogix")
 
-        # Theme Configuration
-        ctk.set_appearance_mode("Dark")  # Or "Light", "System"
+        ctk.set_appearance_mode("Dark")
         ctk.set_default_color_theme("blue")
 
-        # Styling
         self.font_family = "Segoe UI"
         self.font_size = 12
 
-        # App Data
         self.is_running = False
         self.start_time = None
         self.elapsed_time = 0
         self.timer_id = None
 
-        # Load settings from the database
         settings = self.db.load_settings()
         if settings:
             self.company_name = settings["company_name"]
@@ -39,7 +34,6 @@ class MainWindow(ctk.CTk):
             self.hourly_rate = settings["hourly_rate"]
             self.invoice_number = settings["invoice_number"]
         else:
-            # Provide default values if settings are not found
             self.company_name = "Your Company Name"
             self.company_address = "123 Main St, Anytown, USA"
             self.client_name = "Client Name"
@@ -48,7 +42,6 @@ class MainWindow(ctk.CTk):
             self.invoice_number = 1
 
 
-        # UI Components
         self.scrollable_frame = ctk.CTkScrollableFrame(self, width=450, height=600)
         self.scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -96,42 +89,41 @@ class MainWindow(ctk.CTk):
         self.total_time_label = create_label(self.scrollable_frame, "Total Time: 00:00:00", self.font_family, self.font_size)
         self.total_time_label.pack(pady=(5, 15))
 
-        # Settings UI
         self.company_name_label = create_label(self.scrollable_frame, "Company Name:", self.font_family, self.font_size)
         self.company_name_label.pack(pady=(10, 2))
         self.company_name_entry = create_entry(self.scrollable_frame, width=250)
         self.company_name_entry.pack(pady=(2, 10))
-        self.company_name_entry.insert(0, self.company_name)  # Initial value
+        self.company_name_entry.insert(0, self.company_name)
 
         self.company_address_label = create_label(self.scrollable_frame, "Company Address:", self.font_family, self.font_size)
         self.company_address_label.pack(pady=(10, 2))
         self.company_address_entry = create_entry(self.scrollable_frame, width=250)
         self.company_address_entry.pack(pady=(2, 10))
-        self.company_address_entry.insert(0, self.company_address)  # Initial value
+        self.company_address_entry.insert(0, self.company_address)\
 
         self.client_name_label = create_label(self.scrollable_frame, "Client Name:", self.font_family, self.font_size)
         self.client_name_label.pack(pady=(10, 2))
         self.client_name_entry = create_entry(self.scrollable_frame, width=250)
         self.client_name_entry.pack(pady=(2, 10))
-        self.client_name_entry.insert(0, self.client_name)  # Initial value
+        self.client_name_entry.insert(0, self.client_name)
 
         self.client_address_label = create_label(self.scrollable_frame, "Client Address:", self.font_family, self.font_size)
         self.client_address_label.pack(pady=(10, 2))
         self.client_address_entry = create_entry(self.scrollable_frame, width=250)
         self.client_address_entry.pack(pady=(2, 10))
-        self.client_address_entry.insert(0, self.client_address)  # Initial value
+        self.client_address_entry.insert(0, self.client_address)
 
         self.hourly_rate_label = create_label(self.scrollable_frame, "Hourly Rate:", self.font_family, self.font_size)
         self.hourly_rate_label.pack(pady=(10, 2))
         self.hourly_rate_entry = create_entry(self.scrollable_frame, width=100)
         self.hourly_rate_entry.pack(pady=(2, 10))
-        self.hourly_rate_entry.insert(0, str(self.hourly_rate))  # Initial value
+        self.hourly_rate_entry.insert(0, str(self.hourly_rate))
 
         self.update_settings_button = create_button(self.scrollable_frame, "Update Settings", self.update_settings)
         self.update_settings_button.pack(pady=(15, 20))
 
 
-        self.load_log_entries()  # Load log entries after UI is set up
+        self.load_log_entries()
 
     def toggle_timer(self):
         if self.is_running:
@@ -169,7 +161,6 @@ class MainWindow(ctk.CTk):
         duration = self.elapsed_time
         start_time_str = end_time - datetime.timedelta(seconds=duration)
 
-        # Get project ID from the database
         project_id = self.db.get_project_id(project)
         if not project_id:
             print("Project not found in the database.")
@@ -183,7 +174,7 @@ class MainWindow(ctk.CTk):
             duration,
         )
 
-        self.load_log_entries()  # Refresh log entries
+        self.load_log_entries()
         self.elapsed_time = 0
         self.time_label.configure(text="00:00:00")
 
@@ -233,7 +224,6 @@ class MainWindow(ctk.CTk):
             company_name, company_address, client_name, client_address, hourly_rate
         )
 
-        # Update local settings
         self.company_name = company_name
         self.company_address = company_address
         self.client_name = client_name
@@ -254,7 +244,6 @@ class MainWindow(ctk.CTk):
 
     def export_to_pdf(self):
         try:
-            # Load settings and increment invoice number
             settings = self.db.load_settings()
             if settings:
                 self.company_name = settings["company_name"]
@@ -271,9 +260,9 @@ class MainWindow(ctk.CTk):
             self.pdf_exporter.hourly_rate = self.hourly_rate
             self.pdf_exporter.invoice_number = self.invoice_number
 
-            self.pdf_exporter.export_to_pdf(self.log_entries)
+            filename = f"invoice_{self.invoice_number}.pdf"
+            self.pdf_exporter.export_to_pdf(self.log_entries, filename)
 
-            # Increment and save the invoice number
             self.invoice_number += 1
             self.db.save_invoice_number(self.invoice_number)
             self.db.conn.commit()
@@ -290,6 +279,6 @@ class MainWindow(ctk.CTk):
         self.total_time_label.configure(text=f"Total Time: {time_str}")
 
     def exit_app(self):
-        self.destroy()  # Correctly destroy the main window and all children
+        self.destroy()
 
 

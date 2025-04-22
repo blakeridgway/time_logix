@@ -1,4 +1,3 @@
-# timelogix/ui/components.py
 import customtkinter as ctk
 
 
